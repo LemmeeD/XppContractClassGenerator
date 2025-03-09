@@ -16,7 +16,7 @@ namespace XppContractClassGenerator
             PreProcessDirectory(options.OutputDirectoryPath);
 
             JsonParserContractGenerator jpcg = new JsonParserContractGenerator();
-            ContractClasses contracts = jpcg.Parse(options.Json);
+            ContractClasses contracts = jpcg.ParseAndGenerate(options.Json);
 
             foreach (ContractClass contract in contracts)
             {

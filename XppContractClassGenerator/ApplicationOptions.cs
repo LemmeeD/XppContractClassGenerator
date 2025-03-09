@@ -21,7 +21,7 @@ namespace XppContractClassGenerator
         public ApplicationOptions()
         {
             this.NewLine = Environment.NewLine;
-            this.Tab = "\t"; //"     "; // "\t";
+            this.Tab = "\t";
         }
 
         public static ApplicationOptions CreateDefault()

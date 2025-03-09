@@ -9,13 +9,12 @@ namespace XppContractClassGenerator
 {
     class JsonParserContractGenerator
     {
-
         public JsonParserContractGenerator()
         {
             
         }
 
-        public ContractClasses Parse(string json)
+        public ContractClasses ParseAndGenerate(string json)
         {
             JToken jToken = JToken.Parse(json);
             ContractClasses result = new ContractClasses();

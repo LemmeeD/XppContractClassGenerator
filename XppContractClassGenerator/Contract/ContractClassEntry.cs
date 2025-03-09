@@ -57,12 +57,12 @@ namespace XppContractClassGenerator
 
         public static ContractClassEntry CreateJObjectEntryInArray(string propName, JObject element, ContractClass elementContractClass)
         {
-            return new ContractClassEntry(DataTypeHelper.FromJTokenType(JTokenType.Array), false, propName, DataTypeHelper.FromJTokenType(element.Type), elementContractClass);
+            return new ContractClassEntry(DataType.LIST, false, propName, DataTypeHelper.FromJTokenType(element.Type), elementContractClass);
         }
 
         public static ContractClassEntry CreateJValueEntryInArray(string propName, JValue element)
         {
-            return new ContractClassEntry(DataTypeHelper.FromJTokenType(JTokenType.Array), false, propName, DataTypeHelper.FromJTokenType(element.Type), null);
+            return new ContractClassEntry(DataType.LIST, false, propName, DataTypeHelper.FromJTokenType(element.Type), null);
         }
 
         #region Fields

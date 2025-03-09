@@ -30,43 +30,55 @@ namespace XppContractClassGenerator
             {
                 levelAlreadyHasClasses = true;
             }
-
             string newClassName = Static.GetApplicationOptions().BaseClassName + "Level" + level;
-
             if (levelAlreadyHasClasses)
             {
                 ContractClass ccFirst = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).First();
                 Match m1 = Regex.Match(ccFirst.Name, @"^.+_(?<num>\d+)$");
                 if (m1.Success)
                 {
-                    int maxNum = 0;
-                    List<ContractClass> ccList = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).ToList();
-                    foreach (ContractClass cc in ccList)
-                    {
-                        Match m2 = Regex.Match(cc.Name, @"^.+_(?<num>\d+)$");
-                        Group g = m2.Groups["num"];
-                        int lastNum = Convert.ToInt32(g.Value);
-                        if (lastNum > maxNum)
-                        {
-                            maxNum = lastNum;
-                        }
-                    }
+                    int maxNum = this.FindMaximumNumberOfSameLevelClasses(level);
                     newClassName = newClassName + "_" + (maxNum + 1);
                 }
                 else
                 {
-                    List<ContractClass> ccList = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).ToList();
-                    int i = 0;
-                    foreach (ContractClass cc in ccList)
-                    {
-                        cc.Name = cc.Name + "_" + i;
-                        i++;
-                    }
-                    newClassName = newClassName + "_" + i;
+                    int nextNumber = this.UpdateSameLevelClassesName(level);
+                    newClassName = newClassName + "_" + nextNumber;
                 }
             }
-
             return newClassName;
+        }
+
+        protected int UpdateSameLevelClassesName(int level)
+        {
+            List<ContractClass> ccList = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).ToList();
+            int i = 0;
+            foreach (ContractClass cc in ccList)
+            {
+                cc.Name = cc.Name + "_" + i;
+                i++;
+            }
+            return i;
+        }
+
+        protected int FindMaximumNumberOfSameLevelClasses(int level)
+        {
+            int maxNum = 0;
+            List<ContractClass> ccList = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).ToList();
+            foreach (ContractClass cc in ccList)
+            {
+                Match m = Regex.Match(cc.Name, @"^.+_(?<num>\d+)$");
+                if (m.Success)
+                {
+                    Group g = m.Groups["num"];
+                    int lastNum = Convert.ToInt32(g.Value);
+                    if (lastNum > maxNum)
+                    {
+                        maxNum = lastNum;
+                    }
+                }
+            }
+            return maxNum;
         }
 
         public IEnumerator<ContractClass> GetEnumerator()
