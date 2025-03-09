@@ -67,13 +67,10 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Parsing\JsonParserContractGenerator.cs" />
-    <Compile Include="Utils\JTokenHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Static.cs" />
     <Compile Include="Utils\StringHelper.cs" />
-    <Compile Include="TestPrompt.cs" />
-    <Compile Include="Parsing\JsonParserTraversingParameters.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

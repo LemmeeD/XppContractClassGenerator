@@ -48,9 +48,42 @@ namespace XppContractClassGenerator
             return str;
         }
 
-        public static DataType TranslateJTokenType(JTokenType tokenType)
+        public static string ToXppTypesEnum(DataType type)
         {
-            DataType dataType = DataType.STR;
+            string str = "";
+            switch (type)
+            {
+                case DataType.STR:
+                    str = "Types::String";
+                    break;
+                case DataType.INT:
+                    str = "Types::Integer";
+                    break;
+                case DataType.REAL:
+                    str = "Types::Real";
+                    break;
+                case DataType.INT64:
+                    str = "Types::Int64";
+                    break;
+                case DataType.DATE:
+                    str = "Types::Date";
+                    break;
+                case DataType.UTCDATETIME:
+                    str = "Types::UtcDateTime";
+                    break;
+                case DataType.BOOLEAN:
+                    str = "Types::Boolean";
+                    break;
+                case DataType.OBJECT:
+                    str = "Types::Class";
+                    break;
+            }
+            return str;
+        }
+
+        public static DataType FromJTokenType(JTokenType tokenType)
+        {
+            DataType dataType = DataType.NONE;
             switch (tokenType)
             {
                 case JTokenType.Boolean:

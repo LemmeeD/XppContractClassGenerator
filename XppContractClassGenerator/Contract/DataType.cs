@@ -8,15 +8,16 @@ namespace XppContractClassGenerator
 {
     enum DataType
     {
-        STR = 0,
-        INT = 1,
-        REAL = 2,
-        ENUM = 3,
-        DATE = 4,
-        UTCDATETIME = 5,
-        INT64 = 6,
-        BOOLEAN = 7,
-        OBJECT = 8,
-        LIST = 9
+        NONE = 0,
+        STR = 1,
+        INT = 2,
+        REAL = 3,
+        ENUM = 4,
+        DATE = 5,
+        UTCDATETIME = 6,
+        INT64 = 7,
+        BOOLEAN = 8,
+        OBJECT = 9,
+        LIST = 10
     }
 }

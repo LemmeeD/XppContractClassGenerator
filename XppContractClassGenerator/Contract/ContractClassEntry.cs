@@ -12,7 +12,13 @@ namespace XppContractClassGenerator
         public DataType Type { get; set; }
         public string JsonName { get; set; }
         public bool IsDate { get; set; }
-        public ContractClass ChildContract { get; set; }
+        public DataType ElementType { get; set; }
+        public ContractClass ElementContract { get; set; }
+
+        public bool EntryInObject { get { return (this.Type == DataType.OBJECT); } }
+        public bool EntryObjectInArray { get { return (this.Type == DataType.LIST) && (this.ElementType == DataType.OBJECT); } }
+        public bool EntryValueInArray { get { return (this.Type == DataType.LIST) && (this.ElementType != DataType.NONE) && (this.ElementType != DataType.OBJECT) && (this.ElementType != DataType.LIST); } }
+
         public string FieldName { get { return StringHelper.ToCamelCase(this.JsonName); } }
         public string FieldUpperName { get { return StringHelper.FirstLetterUpperCase(this.FieldName); } }
         public string ParameterName { get { return string.Format(@"_{0}", this.FieldName); } }
@@ -25,32 +31,38 @@ namespace XppContractClassGenerator
 
         }
 
-        public ContractClassEntry(DataType _type, string _jsonName, ContractClass _childContract, bool _isDate)
+        public ContractClassEntry(DataType _type, bool _isDate, string _jsonName, DataType _elementType, ContractClass _elementContract)
         {
             this.Type = _type;
-            this.JsonName = _jsonName;
-            this.ChildContract = _childContract;
             this.IsDate = _isDate;
+            this.JsonName = _jsonName;
+            this.ElementType = _elementType;
+            this.ElementContract = _elementContract;
         }
 
-        public static ContractClassEntry CreateFromJValue(string propName, JValue jVal)
+        public static ContractClassEntry CreateJValue(string propName, JValue jVal)
         {
             bool isDate = false;
             if (jVal.Type == JTokenType.String)
             {
-                isDate = StringHelper.StringIsFormattedAsDate((string)jVal.Value, Static.GetApplicationOptions().DateFormat);
+                isDate = StringHelper.StringIsFormattedAsDate((string) jVal.Value, Static.GetApplicationOptions().DateFormat);
             }
-            return new ContractClassEntry(DataTypeHelper.TranslateJTokenType(jVal.Type), propName, null, isDate);
+            return new ContractClassEntry(DataTypeHelper.FromJTokenType(jVal.Type), isDate, propName, DataType.NONE, null);
         }
 
-        public static ContractClassEntry CreateFromJObject(string propName, JObject jObj, ContractClass childContractClass)
+        public static ContractClassEntry CreateJObject(string propName, ContractClass elementContractClass)
         {
-            return new ContractClassEntry(DataTypeHelper.TranslateJTokenType(jObj.Type), propName, childContractClass, false);
+            return new ContractClassEntry(DataType.OBJECT, false, propName, DataType.NONE, elementContractClass);
         }
 
-        public static ContractClassEntry CreateFromJArray(string propName, ContractClass childContractClass)
+        public static ContractClassEntry CreateJObjectEntryInArray(string propName, JObject element, ContractClass elementContractClass)
         {
-            return new ContractClassEntry(DataTypeHelper.TranslateJTokenType(JTokenType.Array), propName, childContractClass, false);
+            return new ContractClassEntry(DataTypeHelper.FromJTokenType(JTokenType.Array), false, propName, DataTypeHelper.FromJTokenType(element.Type), elementContractClass);
+        }
+
+        public static ContractClassEntry CreateJValueEntryInArray(string propName, JValue element)
+        {
+            return new ContractClassEntry(DataTypeHelper.FromJTokenType(JTokenType.Array), false, propName, DataTypeHelper.FromJTokenType(element.Type), null);
         }
 
         #region Fields
@@ -70,7 +82,7 @@ namespace XppContractClassGenerator
             string decoratorStr = null;
             if (this.Type == DataType.OBJECT)
             {
-                decoratorStr = string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, this.ChildContract.Name, this.FieldName);
+                decoratorStr = string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, this.ElementContract.Name, this.FieldName);
             }
             else if (this.Type == DataType.LIST)
             {
@@ -96,12 +108,10 @@ namespace XppContractClassGenerator
             lines.Add(this.generateParmMethod());
             if (Static.GetApplicationOptions().HandleDates && this.IsDate)
             {
-                //lines.Add(Static.GetApplicationOptions().NewLine);
                 lines.Add(this.generateGetDateMethod());
             }
             if (Static.GetApplicationOptions().HandleValuesPresence)
             {
-                //lines.Add(Static.GetApplicationOptions().NewLine);
                 lines.Add(this.generateHasMethod());
             }
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
@@ -122,12 +132,18 @@ namespace XppContractClassGenerator
             string decoratorStr = null;
             if (this.Type == DataType.OBJECT)
             {
-                //decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}')]", Static.GetApplicationOptions().Tab, this.JsonName);
-                decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataObjectAttribute(classStr({2}))]", Static.GetApplicationOptions().Tab, this.JsonName, this.ChildContract.Name);
+                decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataObjectAttribute(classStr({2}))]", Static.GetApplicationOptions().Tab, this.JsonName, this.ElementContract.Name);
             }
             else if (this.Type == DataType.LIST)
             {
-                decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute(Types::Class, classStr({2}))]", Static.GetApplicationOptions().Tab, this.JsonName, this.ChildContract.Name);
+                if (this.ElementType == DataType.OBJECT)
+                {
+                    decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2}, classStr({3}))]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType), this.ElementContract.Name);
+                }
+                else
+                {
+                    decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2})]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType));
+                }
             }
             else
             {
@@ -141,7 +157,7 @@ namespace XppContractClassGenerator
             string signatureStr = null;
             if (this.Type == DataType.OBJECT)
             {
-                signatureStr = string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, this.ChildContract.Name, this.ParmName, this.ParameterName, this.FieldName);
+                signatureStr = string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, this.ElementContract.Name, this.ParmName, this.ParameterName, this.FieldName);
             }
             else if (this.Type == DataType.LIST)
             {
@@ -237,7 +253,7 @@ namespace XppContractClassGenerator
             return other != null &&
                    Type == other.Type &&
                    JsonName == other.JsonName &&
-                   ChildContract == other.ChildContract;
+                   ElementContract == other.ElementContract;
         }
 
         public override int GetHashCode()
@@ -245,7 +261,7 @@ namespace XppContractClassGenerator
             int hashCode = -902181005;
             hashCode = hashCode * -1521134295 + Type.GetHashCode();
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(JsonName);
-            hashCode = hashCode * -1521134295 + EqualityComparer<ContractClass>.Default.GetHashCode(ChildContract);
+            hashCode = hashCode * -1521134295 + EqualityComparer<ContractClass>.Default.GetHashCode(ElementContract);
             return hashCode;
         }
         #endregion
