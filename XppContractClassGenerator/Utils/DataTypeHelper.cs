@@ -9,7 +9,7 @@ namespace XppContractClassGenerator
 {
     class DataTypeHelper
     {
-        public static string ToString(DataType type)
+        public static string ToXppPrimitiveType(DataType type)
         {
             string str = null;
             switch (type)
@@ -44,6 +44,12 @@ namespace XppContractClassGenerator
                 case DataType.LIST:
                     str = "List";
                     break;
+                case DataType.CONTAINER:
+                    str = "container";
+                    break;
+                case DataType.SET:
+                    str = "Set";
+                    break;
             }
             return str;
         }
@@ -77,6 +83,15 @@ namespace XppContractClassGenerator
                 case DataType.OBJECT:
                     str = "Types::Class";
                     break;
+                case DataType.LIST:
+                    str = "Types::Class";
+                    break;
+                case DataType.CONTAINER:
+                    str = "Types::Container";
+                    break;
+                case DataType.SET:
+                    str = "Types::Class";
+                    break;
             }
             return str;
         }
@@ -95,6 +110,9 @@ namespace XppContractClassGenerator
                 case JTokenType.Integer:
                     dataType = DataType.INT;
                     break;
+                case JTokenType.Float:
+                    dataType = DataType.REAL;
+                    break;
                 case JTokenType.String:
                     dataType = DataType.STR;
                     break;
@@ -102,10 +120,70 @@ namespace XppContractClassGenerator
                     dataType = DataType.OBJECT;
                     break;
                 case JTokenType.Array:
-                    dataType = DataType.LIST;
+                    dataType = Static.GetApplicationOptions().CollectionDataType;
                     break;
             }
             return dataType;
+        }
+
+        public static bool IsInstantiable(DataType type)
+        {
+            bool ret = false;
+            switch (type)
+            {
+                case DataType.LIST:
+                    ret = true;
+                    break;
+                case DataType.OBJECT:
+                    ret = true;
+                    break;
+                case DataType.SET:
+                    ret = true;
+                    break;
+                default:
+                    ret = false;
+                    break;
+            }
+            return ret;
+        }
+
+        public static bool IsCollection(DataType type)
+        {
+            bool ret = false;
+            switch (type)
+            {
+                case DataType.LIST:
+                    ret = true;
+                    break;
+                case DataType.CONTAINER:
+                    ret = true;
+                    break;
+                case DataType.SET:
+                    ret = true;
+                    break;
+                default:
+                    ret = false;
+                    break;
+            }
+            return ret;
+        }
+
+        public static bool IsTypedCollection(DataType type)
+        {
+            bool ret = false;
+            switch (type)
+            {
+                case DataType.LIST:
+                    ret = true;
+                    break;
+                case DataType.SET:
+                    ret = true;
+                    break;
+                default:
+                    ret = false;
+                    break;
+            }
+            return ret;
         }
     }
 }

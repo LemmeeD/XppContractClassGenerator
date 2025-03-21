@@ -17,6 +17,7 @@ namespace XppContractClassGenerator
         public bool HandleValuesPresence { get; set; }
         public bool HandleDates { get; set; }
         public string DateFormat { get; set; }
+        public DataType CollectionDataType { get; set; }
 
         public ApplicationOptions()
         {
@@ -33,6 +34,7 @@ namespace XppContractClassGenerator
             options.HandleValuesPresence = false;
             options.HandleDates = false;
             options.DateFormat = "dd-MM-yyyy";
+            options.CollectionDataType = DataType.LIST;
             return options;
         }
     }

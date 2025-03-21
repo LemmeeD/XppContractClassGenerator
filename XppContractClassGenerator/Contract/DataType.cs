@@ -18,6 +18,8 @@ namespace XppContractClassGenerator
         INT64 = 7,
         BOOLEAN = 8,
         OBJECT = 9,
-        LIST = 10
+        LIST = 10,
+        CONTAINER = 11,
+        SET = 12
     }
 }

@@ -16,9 +16,6 @@ namespace XppContractClassGenerator
         public AppForm()
         {
             InitializeComponent();
-
-            ApplicationOptions options = ApplicationOptions.CreateDefault();
-            this.SetApplicationOptions(options);
         }
 
         private void buttonJsonReset_Click(object sender, EventArgs e)
@@ -34,6 +31,7 @@ namespace XppContractClassGenerator
             this.checkBoxValuesPresence.Checked = options.HandleValuesPresence;
             this.checkBoxGetDates.Checked = options.HandleDates;
             this.textBoxGetDates.Text = options.DateFormat;
+            this.comboBoxCollection.SelectedItem = options.CollectionDataType;
         }
 
         private ApplicationOptions GetDefaultApplicationOptions()
@@ -45,6 +43,7 @@ namespace XppContractClassGenerator
             options.HandleValuesPresence = this.checkBoxValuesPresence.Checked;
             options.HandleDates = this.checkBoxGetDates.Checked;
             options.DateFormat = this.textBoxGetDates.Text;
+            options.CollectionDataType = (DataType) this.comboBoxCollection.SelectedItem;
             return options;
         }
 
@@ -69,6 +68,22 @@ namespace XppContractClassGenerator
                 this.textBoxGetDates.Visible = visibility;
                 this.labelGetDates.Visible = visibility;
             }
+        }
+
+        private void AppForm_Load(object sender, EventArgs e)
+        {
+            Array enumValues = Enum.GetValues(typeof(DataType));
+            for (int i=0; i<enumValues.Length; i++)
+            {
+                DataType cursor = (DataType)enumValues.GetValue(i);
+                if (DataTypeHelper.IsCollection(cursor))
+                {
+                    this.comboBoxCollection.Items.Add(cursor);
+                }
+            }
+
+            ApplicationOptions options = ApplicationOptions.CreateDefault();
+            this.SetApplicationOptions(options);
         }
     }
 }

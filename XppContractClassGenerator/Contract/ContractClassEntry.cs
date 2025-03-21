@@ -14,17 +14,47 @@ namespace XppContractClassGenerator
         public bool IsDate { get; set; }
         public DataType ElementType { get; set; }
         public ContractClass ElementContract { get; set; }
+        public bool IsRoot { get; set; }
+        public string FieldVariableType
+        {
+            get
+            {
+                string ret = "";
+                if (this.Type == DataType.OBJECT)
+                {
+                    ret = this.ElementContract.Name;
+                }
+                else
+                {
+                    ret = DataTypeHelper.ToXppPrimitiveType(this.Type);
+                }
+                return ret;
+            }
+        }
 
-        public bool EntryInObject { get { return (this.Type == DataType.OBJECT); } }
-        public bool EntryObjectInArray { get { return (this.Type == DataType.LIST) && (this.ElementType == DataType.OBJECT); } }
-        public bool EntryValueInArray { get { return (this.Type == DataType.LIST) && (this.ElementType != DataType.NONE) && (this.ElementType != DataType.OBJECT) && (this.ElementType != DataType.LIST); } }
-
-        public string FieldName { get { return StringHelper.ToCamelCase(this.JsonName); } }
-        public string FieldUpperName { get { return StringHelper.FirstLetterUpperCase(this.FieldName); } }
-        public string ParameterName { get { return string.Format(@"_{0}", this.FieldName); } }
-        public string ParmName { get { return string.Format(@"parm{0}", this.FieldUpperName); } }
-        public string HasFieldName { get { return string.Format(@"has{0}", this.FieldUpperName); } }
-        public string GetFieldName { get { return string.Format(@"get{0}", this.FieldUpperName); } }
+        public string FieldVariableName
+        {
+            get
+            {
+                string ret = "";
+                if (this.IsRootJArray)
+                {
+                    // caso speciale: JSON solo con un array
+                    ret = "elements";   //valore di default per il campo
+                }
+                else
+                {
+                    ret = StringHelper.ToCamelCase(this.JsonName);
+                }
+                return ret;
+            }
+        }
+        public string FieldVariableUpperName { get { return StringHelper.FirstLetterUpperCase(this.FieldVariableName); } }
+        public string ParameterVariableName { get { return string.Format(@"_{0}", this.FieldVariableName); } }
+        public string ParmMethodName { get { return string.Format(@"parm{0}", this.FieldVariableUpperName); } }
+        public string HasMethodName { get { return string.Format(@"has{0}", this.FieldVariableUpperName); } }
+        public string GetMethodName { get { return string.Format(@"get{0}", this.FieldVariableUpperName); } }
+        public bool IsRootJArray { get { return string.IsNullOrEmpty(this.JsonName) && this.IsRoot && DataTypeHelper.IsCollection(this.Type); } }
 
         public ContractClassEntry()
         {
@@ -40,109 +70,118 @@ namespace XppContractClassGenerator
             this.ElementContract = _elementContract;
         }
 
-        public static ContractClassEntry CreateJValue(string propName, JValue jVal)
+        public static ContractClassEntry CreateJValueInJObject(string propName, JValue jVal)
         {
             bool isDate = false;
             if (jVal.Type == JTokenType.String)
             {
-                isDate = StringHelper.StringIsFormattedAsDate((string) jVal.Value, Static.GetApplicationOptions().DateFormat);
+                isDate = StringHelper.StringIsFormattedAsDate((string)jVal.Value, Static.GetApplicationOptions().DateFormat);
             }
             return new ContractClassEntry(DataTypeHelper.FromJTokenType(jVal.Type), isDate, propName, DataType.NONE, null);
         }
 
-        public static ContractClassEntry CreateJObject(string propName, ContractClass elementContractClass)
+        public static ContractClassEntry CreateJObjectInJObject(string propName, ContractClass elementContractClass)
         {
-            return new ContractClassEntry(DataType.OBJECT, false, propName, DataType.NONE, elementContractClass);
+            return new ContractClassEntry(DataType.OBJECT, false, propName, DataType.OBJECT, elementContractClass);
         }
 
-        public static ContractClassEntry CreateJObjectEntryInArray(string propName, JObject element, ContractClass elementContractClass)
+        public static ContractClassEntry CreateJValueInJArray(JValue element)
         {
-            return new ContractClassEntry(DataType.LIST, false, propName, DataTypeHelper.FromJTokenType(element.Type), elementContractClass);
+            return new ContractClassEntry(Static.GetApplicationOptions().CollectionDataType, false, null, DataTypeHelper.FromJTokenType(element.Type), null);
         }
 
-        public static ContractClassEntry CreateJValueEntryInArray(string propName, JValue element)
+        public static ContractClassEntry CreateJObjectInJArray(ContractClass elementContractClass)
         {
-            return new ContractClassEntry(DataType.LIST, false, propName, DataTypeHelper.FromJTokenType(element.Type), null);
+            return new ContractClassEntry(Static.GetApplicationOptions().CollectionDataType, false, null, DataType.OBJECT, elementContractClass);
+        }
+
+        public static ContractClassEntry CreateJArrayInJObject(string propName, DataType elementType, ContractClass elementContractClass)
+        {
+            return new ContractClassEntry(Static.GetApplicationOptions().CollectionDataType, false, propName, elementType, elementContractClass);
         }
 
         #region Fields
-        public string generateFields()
+        public string GenerateFields()
         {
             List<string> lines = new List<string>();
-            lines.Add(this.generateField());
+            lines.Add(this.GenerateField());
             if (Static.GetApplicationOptions().HandleValuesPresence)
             {
-                lines.Add(this.generateHasField());
+                lines.Add(this.GenerateHasField());
             }
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
-        public string generateField()
+        public string GenerateField()
         {
-            string decoratorStr = null;
-            if (this.Type == DataType.OBJECT)
-            {
-                decoratorStr = string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, this.ElementContract.Name, this.FieldName);
-            }
-            else if (this.Type == DataType.LIST)
-            {
-                decoratorStr = string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(this.Type), this.FieldName);
-            }
-            else
-            {
-                decoratorStr = string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(this.Type), this.FieldName);
-            }
-            return decoratorStr;
-            
+            return string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, this.FieldVariableType, this.FieldVariableName);
         }
 
-        public string generateHasField()
+        public string GenerateHasField()
         {
-            return string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(DataType.BOOLEAN), this.HasFieldName);
+            return string.Format("{0}protected {1} {2};", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppPrimitiveType(DataType.BOOLEAN), this.HasMethodName);
         }
         #endregion
 
-        public string generateMethods()
+        public string GenerateMethods()
         {
             List<string> lines = new List<string>();
-            lines.Add(this.generateParmMethod());
+            lines.Add(this.GenerateParmMethod());
             if (Static.GetApplicationOptions().HandleDates && this.IsDate)
             {
-                lines.Add(this.generateGetDateMethod());
+                lines.Add(this.GenerateGetDateMethod());
             }
             if (Static.GetApplicationOptions().HandleValuesPresence)
             {
-                lines.Add(this.generateHasMethod());
+                lines.Add(this.GenerateHasMethod());
             }
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
         #region ParmMethod
-        protected string generateParmMethod()
+        protected string GenerateParmMethod()
         {
             List<string> lines = new List<string>();
-            lines.Add(this.generateParmMethodDecorator());
-            lines.Add(this.generateParmMethodSignature());
-            lines.Add(this.generateParmMethodBody());
+            lines.Add(this.GenerateParmMethodDecorator());
+            lines.Add(this.GenerateParmMethodSignature());
+            lines.Add(this.GenerateParmMethodBody());
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
-        protected string generateParmMethodDecorator()
+        protected string GenerateParmMethodDecorator()
         {
             string decoratorStr = null;
-            if (this.Type == DataType.OBJECT)
-            {
-                decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataObjectAttribute(classStr({2}))]", Static.GetApplicationOptions().Tab, this.JsonName, this.ElementContract.Name);
-            }
-            else if (this.Type == DataType.LIST)
+            if (this.IsRoot && DataTypeHelper.IsCollection(this.Type))
             {
                 if (this.ElementType == DataType.OBJECT)
                 {
-                    decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2}, classStr({3}))]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType), this.ElementContract.Name);
+                    decoratorStr = string.Format(@"{0}[DataCollectionAttribute({1}, classStr({2}))]", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppTypesEnum(this.ElementType), this.ElementContract.Name);
                 }
                 else
                 {
-                    decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2})]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType));
+                    decoratorStr = string.Format(@"{0}[DataCollectionAttribute({1})]", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppTypesEnum(this.ElementType));
+                }
+            }
+            else if (this.Type == DataType.OBJECT)
+            {
+                decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataObjectAttribute(classStr({2}))]", Static.GetApplicationOptions().Tab, this.JsonName, this.ElementContract.Name);
+            }
+            else if (DataTypeHelper.IsCollection(this.Type))
+            {
+                if (DataTypeHelper.IsTypedCollection(this.Type))
+                {
+                    if (this.ElementType == DataType.OBJECT)
+                    {
+                        decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2}, classStr({3}))]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType), this.ElementContract.Name);
+                    }
+                    else
+                    {
+                        decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2})]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.ElementType));
+                    }
+                }
+                else
+                {
+                    decoratorStr = string.Format(@"{0}[DataMemberAttribute('{1}'), DataCollectionAttribute({2})]", Static.GetApplicationOptions().Tab, this.JsonName, DataTypeHelper.ToXppTypesEnum(this.Type));
                 }
             }
             else
@@ -152,91 +191,78 @@ namespace XppContractClassGenerator
             return decoratorStr;
         }
 
-        protected string generateParmMethodSignature()
+        protected string GenerateParmMethodSignature()
         {
-            string signatureStr = null;
-            if (this.Type == DataType.OBJECT)
-            {
-                signatureStr = string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, this.ElementContract.Name, this.ParmName, this.ParameterName, this.FieldName);
-            }
-            else if (this.Type == DataType.LIST)
-            {
-                signatureStr = string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(this.Type), this.ParmName, this.ParameterName, this.FieldName);
-            }
-            else
-            {
-                signatureStr = string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(this.Type), this.ParmName, this.ParameterName, this.FieldName);
-            }
-            return signatureStr;
+            return string.Format(@"{0}public {1} {2}({1} {3} = {4})", Static.GetApplicationOptions().Tab, this.FieldVariableType, this.ParmMethodName, this.ParameterVariableName, this.FieldVariableName); ;
         }
 
-        protected string generateParmMethodBody()
+        protected string GenerateParmMethodBody()
         {
             List<string> lines = new List<string>();
             lines.Add(Static.GetApplicationOptions().Tab + "{");
             if (Static.GetApplicationOptions().HandleValuesPresence)
             {
-                lines.Add(string.Format(@"{0}{0}if (!prmIsDefault({1}))", Static.GetApplicationOptions().Tab, this.HasFieldName));
+                lines.Add(string.Format(@"{0}{0}if (!prmIsDefault({1}))", Static.GetApplicationOptions().Tab, this.HasMethodName));
                 lines.Add(Static.GetApplicationOptions().Tab + Static.GetApplicationOptions().Tab + "{");
-                lines.Add(string.Format(@"{0}{0}{0}{1} = true;", Static.GetApplicationOptions().Tab, this.HasFieldName));
+                lines.Add(string.Format(@"{0}{0}{0}{1} = true;", Static.GetApplicationOptions().Tab, this.HasMethodName));
                 lines.Add(Static.GetApplicationOptions().Tab + Static.GetApplicationOptions().Tab + "}");
             }
-            lines.Add(string.Format(@"{0}{0}{1} = {2};", Static.GetApplicationOptions().Tab, this.FieldName, this.ParameterName));
-            lines.Add(string.Format(@"{0}{0}return {1};", Static.GetApplicationOptions().Tab, this.FieldName));
+            lines.Add(string.Format(@"{0}{0}{1} = {2};", Static.GetApplicationOptions().Tab, this.FieldVariableName, this.ParameterVariableName));
+            lines.Add(string.Format(@"{0}{0}return {1};", Static.GetApplicationOptions().Tab, this.FieldVariableName));
             lines.Add(Static.GetApplicationOptions().Tab + "}");
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
         #endregion
 
         #region HasMethod
-        protected string generateHasMethod()
+        protected string GenerateHasMethod()
         {
             List<string> lines = new List<string>();
-            lines.Add(this.generateHasMethodSignature());
-            lines.Add(this.generateHasMethodBody());
+            lines.Add(this.GenerateHasMethodSignature());
+            lines.Add(this.GenerateHasMethodBody());
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
-        protected string generateHasMethodSignature()
+        protected string GenerateHasMethodSignature()
         {
-            return string.Format(@"{0}public {1} {2}()", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(DataType.BOOLEAN), this.HasFieldName);
+            return string.Format(@"{0}public {1} {2}()", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppPrimitiveType(DataType.BOOLEAN), this.HasMethodName);
         }
 
-        protected string generateHasMethodBody()
+        protected string GenerateHasMethodBody()
         {
             List<string> lines = new List<string>();
             lines.Add(Static.GetApplicationOptions().Tab + "{");
-            lines.Add(string.Format(@"{0}{0}return {1};", Static.GetApplicationOptions().Tab, this.HasFieldName));
+            lines.Add(string.Format(@"{0}{0}return {1};", Static.GetApplicationOptions().Tab, this.HasMethodName));
             lines.Add(Static.GetApplicationOptions().Tab + "}");
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
         #endregion
 
         #region GetDateMethod
-        protected string generateGetDateMethod()
+        protected string GenerateGetDateMethod()
         {
             List<string> lines = new List<string>();
             lines.Add(this.generateGetDateMethodSignature());
-            lines.Add(this.generateGetDateMethodBody());
+            lines.Add(this.GenerateGetDateMethodBody());
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
         protected string generateGetDateMethodSignature()
         {
-            return string.Format(@"{0}public {1} {2}()", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(DataType.UTCDATETIME), this.GetFieldName);
+            return string.Format(@"{0}public {1} {2}()", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppPrimitiveType(DataType.UTCDATETIME), this.GetMethodName);
         }
 
-        protected string generateGetDateMethodBody()
+        protected string GenerateGetDateMethodBody()
         {
             List<string> lines = new List<string>();
             lines.Add(Static.GetApplicationOptions().Tab + "{");
-            lines.Add(string.Format(@"{0}{0}{1} ret;", Static.GetApplicationOptions().Tab, DataTypeHelper.ToString(DataType.UTCDATETIME)));
-            lines.Add(string.Format(@"{0}{0}if (this.{1}())", Static.GetApplicationOptions().Tab, this.ParmName));
+            lines.Add(string.Format(@"{0}{0}{1} ret;", Static.GetApplicationOptions().Tab, DataTypeHelper.ToXppPrimitiveType(DataType.UTCDATETIME)));
+            lines.Add(string.Format(@"{0}{0}if (this.{1}())", Static.GetApplicationOptions().Tab, this.ParmMethodName));
             lines.Add(Static.GetApplicationOptions().Tab + Static.GetApplicationOptions().Tab + "{");
-            lines.Add(string.Format(@"{0}{0}{0}System.DateTime csDateTime = System.DateTime::ParseExact(this.{1}(), ""{2}"", null);", Static.GetApplicationOptions().Tab, this.ParmName, Static.GetApplicationOptions().DateFormat));
+            lines.Add(string.Format(@"{0}{0}{0}System.DateTime csDateTime = System.DateTime::ParseExact(this.{1}(), ""{2}"", null);", Static.GetApplicationOptions().Tab, this.ParmMethodName, Static.GetApplicationOptions().DateFormat));
             lines.Add(string.Format(@"{0}{0}{0}ret = Global::clrSystemDateTime2UtcDateTime(csDateTime);", Static.GetApplicationOptions().Tab));
             lines.Add(Static.GetApplicationOptions().Tab + Static.GetApplicationOptions().Tab + "}");
-            lines.Add(string.Format(@"{0}{0}return ret;", Static.GetApplicationOptions().Tab, this.HasFieldName));
+            lines.Add(string.Format(@"{0}{0}return ret;", Static.GetApplicationOptions().Tab, this.HasMethodName));
             lines.Add(Static.GetApplicationOptions().Tab + "}");
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }

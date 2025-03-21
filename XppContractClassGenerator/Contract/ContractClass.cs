@@ -11,6 +11,13 @@ namespace XppContractClassGenerator
         public string Name { get; set; }
         public int Level { get; set; }
         protected List<ContractClassEntry> Entries;
+        public bool HasInstantiableFields
+        {
+            get
+            {
+                return (Entries.Where(e => { return DataTypeHelper.IsInstantiable(e.Type); }).Count() > 0);
+            }
+        }
 
         public ContractClass(string name, int level)
         {
@@ -32,15 +39,75 @@ namespace XppContractClassGenerator
             lines.Add("{");
             foreach (ContractClassEntry entry in this.Entries)
             {
-                lines.Add(entry.generateFields());
+                lines.Add(entry.GenerateFields());
             }
             lines.Add(Static.GetApplicationOptions().NewLine);
             foreach (ContractClassEntry entry in this.Entries)
             {
-                lines.Add(entry.generateMethods());
+                lines.Add(entry.GenerateMethods());
                 lines.Add(Static.GetApplicationOptions().NewLine);
             }
+            //lines.Add(this.GenerateConstructor());
+            lines.Add(this.GenerateConstructMethod());
             lines.Add(@"}");
+            return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
+        }
+
+        public string GenerateConstructor()
+        {
+            List<string> lines = new List<string>();
+            lines.Add(string.Format(@"{0}public void new()", Static.GetApplicationOptions().Tab));
+            lines.Add(Static.GetApplicationOptions().Tab + @"{");
+            foreach (ContractClassEntry entry in this.Entries)
+            {
+                if (DataTypeHelper.IsInstantiable(entry.Type))
+                {
+                    if (DataTypeHelper.IsCollection(entry.Type))
+                    {
+                        lines.Add(string.Format("{0}{0}{1} = new {2}({3});", Static.GetApplicationOptions().Tab, entry.FieldVariableName, entry.FieldVariableType, DataTypeHelper.ToXppTypesEnum(entry.ElementType)));
+                    }
+                    else
+                    {
+                        lines.Add(string.Format("{0}{0}{1} = new {2}();", Static.GetApplicationOptions().Tab, entry.FieldVariableName, entry.FieldVariableType));
+                    }
+                }
+            }
+            lines.Add(Static.GetApplicationOptions().Tab + @"}");
+            return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
+        }
+
+        public string GenerateConstructMethod()
+        {
+            List<string> lines = new List<string>();
+            if (HasInstantiableFields)
+            {
+                lines.Add(string.Format(@"{0}public void initFields()", Static.GetApplicationOptions().Tab));
+                lines.Add(Static.GetApplicationOptions().Tab + @"{");
+                foreach (ContractClassEntry entry in this.Entries)
+                {
+                    if (DataTypeHelper.IsInstantiable(entry.Type))
+                    {
+                        if (DataTypeHelper.IsCollection(entry.Type))
+                        {
+                            lines.Add(string.Format("{0}{0}{1} = new {2}({3});", Static.GetApplicationOptions().Tab, entry.FieldVariableName, entry.FieldVariableType, DataTypeHelper.ToXppTypesEnum(entry.ElementType)));
+                        }
+                        else
+                        {
+                            lines.Add(string.Format("{0}{0}{1} = {2}::construct();", Static.GetApplicationOptions().Tab, entry.FieldVariableName, entry.FieldVariableType));
+                        }
+                    }
+                }
+                lines.Add(Static.GetApplicationOptions().Tab + @"}");
+            }
+            lines.Add(string.Format(@"{0}public static {1} construct()", Static.GetApplicationOptions().Tab, this.Name));
+            lines.Add(Static.GetApplicationOptions().Tab + @"{");
+            lines.Add(string.Format("{0}{0}{1} newObj = new {1}();", Static.GetApplicationOptions().Tab, this.Name));
+            if (HasInstantiableFields)
+            {
+                lines.Add(string.Format("{0}{0}newObj.initFields();", Static.GetApplicationOptions().Tab, this.Name));
+            }
+            lines.Add(string.Format("{0}{0}return newObj;", Static.GetApplicationOptions().Tab, this.Name));
+            lines.Add(Static.GetApplicationOptions().Tab + @"}");
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 
