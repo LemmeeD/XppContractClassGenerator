@@ -31,7 +31,8 @@ namespace XppContractClassGenerator
             this.checkBoxValuesPresence.Checked = options.HandleValuesPresence;
             this.checkBoxGetDates.Checked = options.HandleDates;
             this.textBoxGetDates.Text = options.DateFormat;
-            this.comboBoxCollection.SelectedItem = options.CollectionDataType;
+            this.comboBoxProgLanguage.SelectedItem = options.Language;
+            this.checkBoxGetColl.Checked = options.TranscribeGetCollectionAtIndex;
         }
 
         private ApplicationOptions GetDefaultApplicationOptions()
@@ -43,7 +44,8 @@ namespace XppContractClassGenerator
             options.HandleValuesPresence = this.checkBoxValuesPresence.Checked;
             options.HandleDates = this.checkBoxGetDates.Checked;
             options.DateFormat = this.textBoxGetDates.Text;
-            options.CollectionDataType = (DataType) this.comboBoxCollection.SelectedItem;
+            options.Language = (ProgrammingLanguage) this.comboBoxProgLanguage.SelectedItem;
+            options.TranscribeGetCollectionAtIndex = this.checkBoxGetColl.Checked;
             return options;
         }
 
@@ -72,14 +74,11 @@ namespace XppContractClassGenerator
 
         private void AppForm_Load(object sender, EventArgs e)
         {
-            Array enumValues = Enum.GetValues(typeof(DataType));
+            Array enumValues = Enum.GetValues(typeof(ProgrammingLanguage));
             for (int i=0; i<enumValues.Length; i++)
             {
-                DataType cursor = (DataType)enumValues.GetValue(i);
-                if (DataTypeHelper.IsCollection(cursor))
-                {
-                    this.comboBoxCollection.Items.Add(cursor);
-                }
+                ProgrammingLanguage cursor = (ProgrammingLanguage) enumValues.GetValue(i);
+                this.comboBoxProgLanguage.Items.Add(cursor);
             }
 
             ApplicationOptions options = ApplicationOptions.CreateDefault();

@@ -20,9 +20,20 @@ namespace XppContractClassGenerator
 
             foreach (ContractClass contract in contracts)
             {
-                string filepath = Path.Combine(options.OutputDirectoryPath, contract.Name + ".cs");
+                string filepath = "";
+                string filecontent = "";
+                if (Static.GetApplicationOptions().Language == ProgrammingLanguage.SourceCode)
+                {
+                    filepath = Path.Combine(options.OutputDirectoryPath, contract.Name + ".cs");
+                    filecontent = contract.GenerateClass();
+                }
+                else if (Static.GetApplicationOptions().Language == ProgrammingLanguage.XmlSourceCode)
+                {
+                    filepath = Path.Combine(options.OutputDirectoryPath, contract.Name + ".xml");
+                    filecontent = contract.GenerateXppClass();
+                }
                 StreamWriter sw = File.CreateText(filepath);
-                sw.Write(contract.GenerateClass());
+                sw.Write(filecontent);
                 sw.Dispose();
             }
 

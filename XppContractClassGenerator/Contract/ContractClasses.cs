@@ -30,7 +30,11 @@ namespace XppContractClassGenerator
             {
                 levelAlreadyHasClasses = true;
             }
-            string newClassName = Static.GetApplicationOptions().BaseClassName + "Level" + level;
+            string newClassName = Static.GetApplicationOptions().BaseClassName;
+            if (level > 0)
+            {
+                newClassName += ("Level" + level);
+            }
             if (levelAlreadyHasClasses)
             {
                 ContractClass ccFirst = contracts.Where(cc => cc.Level == level).OrderBy(cc => cc.Name).First();

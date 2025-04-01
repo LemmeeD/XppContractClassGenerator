@@ -18,11 +18,14 @@ namespace XppContractClassGenerator
         public bool HandleDates { get; set; }
         public string DateFormat { get; set; }
         public DataType CollectionDataType { get; set; }
+        public ProgrammingLanguage Language { get; set; }
+        public bool TranscribeGetCollectionAtIndex { get; set; }
 
         public ApplicationOptions()
         {
             this.NewLine = Environment.NewLine;
             this.Tab = "\t";
+            this.CollectionDataType = DataType.LIST;
         }
 
         public static ApplicationOptions CreateDefault()
@@ -33,8 +36,10 @@ namespace XppContractClassGenerator
             options.BaseClassName = "JsonContract";
             options.HandleValuesPresence = false;
             options.HandleDates = false;
-            options.DateFormat = "dd-MM-yyyy";
+            options.DateFormat = "yyyy-MM-dd";
             options.CollectionDataType = DataType.LIST;
+            options.Language = ProgrammingLanguage.SourceCode;
+            options.TranscribeGetCollectionAtIndex = false;
             return options;
         }
     }

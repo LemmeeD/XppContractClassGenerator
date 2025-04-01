@@ -18,7 +18,6 @@ namespace XppContractClassGenerator
         {
             JToken jToken = JToken.Parse(json);
             ContractClasses result = new ContractClasses();
-            //this.RecursiveTraverse(result, null, null, jToken, 0, null, false, false);
             this.RecursiveMainTraverse(result, jToken);
             return result;
         }

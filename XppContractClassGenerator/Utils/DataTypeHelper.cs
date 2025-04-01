@@ -155,12 +155,14 @@ namespace XppContractClassGenerator
                 case DataType.LIST:
                     ret = true;
                     break;
+                    /*
                 case DataType.CONTAINER:
                     ret = true;
                     break;
                 case DataType.SET:
                     ret = true;
                     break;
+                    */
                 default:
                     ret = false;
                     break;

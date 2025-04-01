@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
+using static System.Windows.Forms.LinkLabel;
 
 namespace XppContractClassGenerator
 {
@@ -10,7 +14,7 @@ namespace XppContractClassGenerator
     {
         public string Name { get; set; }
         public int Level { get; set; }
-        protected List<ContractClassEntry> Entries;
+        public List<ContractClassEntry> Entries { get; set; }
         public bool HasInstantiableFields
         {
             get
@@ -31,11 +35,71 @@ namespace XppContractClassGenerator
             this.Entries.Add(entry);
         }
 
+        public string GenerateXppClass()
+        {
+            MemoryStream ms = new MemoryStream();
+            XmlDocument root = new XmlDocument();
+            XmlDeclaration dec = root.CreateXmlDeclaration("1.0", "utf-8", null);
+            root.AppendChild(dec);
+
+            XmlNode classNode = root.CreateElement("AxClass");
+            root.AppendChild(classNode);
+
+            XmlNode nameNode = root.CreateElement("Name");
+            nameNode.InnerText = this.Name;
+            classNode.AppendChild(nameNode);
+
+            XmlNode sourceCodeNode = root.CreateElement("SourceCode");
+            //sourceCodeNode.InnerText = this.Name;
+            classNode.AppendChild(sourceCodeNode);
+
+            XmlNode declarationNode = this.GenerateXppDeclaration(root);
+            sourceCodeNode.AppendChild(declarationNode);
+
+            XmlNode methodsNode = this.GenerateXppMethods(root);
+            sourceCodeNode.AppendChild(methodsNode);
+
+            root.Save(ms);
+            byte[] fileContent = ms.ToArray();
+            string ret = Encoding.UTF8.GetString(fileContent);
+            ret = ret.Replace("<AxClass>", "<AxClass xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">");
+            ret = ret.Replace("&lt;", "<");
+            ret = ret.Replace("&gt;", ">");
+            return ret;
+        }
+
+        protected XmlNode GenerateXppDeclaration(XmlDocument _Root)
+        {
+            XmlNode sourceCodeDeclarationNode = _Root.CreateElement("Declaration");
+            sourceCodeDeclarationNode.InnerText = StringHelper.EmbedSourceCodeInCDATANode(this.GenerateXppClassDeclaration());
+            return sourceCodeDeclarationNode;
+        }
+
+        protected XmlNode GenerateXppMethods(XmlDocument _Root)
+        {
+            XmlNode methodsNode = _Root.CreateElement("Methods");
+            foreach (ContractClassEntry entry in this.Entries)
+            {
+                entry.GenerateAndAddXppMethods(_Root, methodsNode);
+            }
+            return methodsNode;
+        }
+
+        protected void GenerateAndAddXppMethod(XmlDocument _Root, XmlNode _MethodsNode, string _MethodName, string _MethodSource)
+        {
+            XmlNode methodNameNode = _Root.CreateElement("Name");
+            methodNameNode.InnerText = _MethodName;
+            _MethodsNode.AppendChild(methodNameNode);
+
+            XmlNode methodourceNode = _Root.CreateElement("Source");
+            methodourceNode.InnerText = StringHelper.EmbedSourceCodeInCDATANode(_MethodSource);
+            _MethodsNode.AppendChild(methodourceNode);
+        }
+
         public string GenerateClass()
         {
             List<string> lines = new List<string>();
-            lines.Add(@"[DataContractAttribute]");
-            lines.Add(string.Format(@"public class {0}", this.Name));
+            lines.Add(this.GenerateClassSignature());
             lines.Add("{");
             foreach (ContractClassEntry entry in this.Entries)
             {
@@ -44,12 +108,34 @@ namespace XppContractClassGenerator
             lines.Add(Static.GetApplicationOptions().NewLine);
             foreach (ContractClassEntry entry in this.Entries)
             {
-                lines.Add(entry.GenerateMethods());
+                lines.Add(entry.GenerateCsMethods());
                 lines.Add(Static.GetApplicationOptions().NewLine);
             }
             //lines.Add(this.GenerateConstructor());
             lines.Add(this.GenerateConstructMethod());
             lines.Add(@"}");
+            return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
+        }
+
+        protected string GenerateClassSignature()
+        {
+            List<string> lines = new List<string>();
+            lines.Add(@"[DataContractAttribute]");
+            lines.Add(string.Format(@"public class {0}", this.Name));
+            return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
+        }
+
+        protected string GenerateXppClassDeclaration()
+        {
+            List<string> lines = new List<string>();
+            lines.Add(this.GenerateClassSignature());
+            lines.Add("{");
+            foreach (ContractClassEntry entry in this.Entries)
+            {
+                lines.Add(entry.GenerateFields());
+            }
+            lines.Add("}");
+            lines.Add(Static.GetApplicationOptions().NewLine);
             return CollectionHelper.Stringify<string>(lines, Static.GetApplicationOptions().NewLine);
         }
 

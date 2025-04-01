@@ -38,5 +38,10 @@ namespace XppContractClassGenerator
             }
             return ret;
         }
+
+        public static string EmbedSourceCodeInCDATANode(string _SourceCode)
+        {
+            return "<![CDATA[" + Static.GetApplicationOptions().NewLine + _SourceCode + "]]>";
+        }
     }
 }
